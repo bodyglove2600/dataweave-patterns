@@ -13,7 +13,7 @@ Add to your Mule project `pom.xml`:
     <groupId>cb0ecddd-1505-4354-870f-45c4217384c2</groupId>
     <artifactId>dw-module-name</artifactId>
     <version>1.0.0</version>
-    <classifier>mule-plugin</classifier>
+    <classifier>jar</classifier>
 </dependency>
 ```
 

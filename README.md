@@ -191,11 +191,11 @@ Reusable DataWeave utility libraries — import via Maven, no copy-paste needed.
 
 | Module | Description | Status |
 |--------|-------------|--------|
-| `dw-string-utils` | 15+ string functions (camelize, slugify, mask, etc.) | Coming Soon |
-| `dw-date-utils` | 10+ date functions (addDays, diffDays, toEpoch, etc.) | Coming Soon |
-| `dw-collection-utils` | 15+ collection functions (chunk, deepMerge, pivot, etc.) | Coming Soon |
-| `dw-error-handler` | 8+ error functions (classifyError, isRetryable, etc.) | Coming Soon |
-| `dw-xml-helpers` | 10+ XML functions (stripNamespaces, xpathLike, etc.) | Coming Soon |
+| `dw-string-utils` | 15+ string functions (camelize, slugify, mask, etc.) | Live on Exchange |
+| `dw-date-utils` | 11 date functions (addDays, diffDays, toEpoch, etc.) | Live on Exchange |
+| `dw-collection-utils` | 15+ collection functions (chunk, deepMerge, pivot, etc.) | Live on Exchange |
+| `dw-error-handler` | 8 error functions (classifyError, isRetryable, etc.) | Live on Exchange |
+| `dw-xml-helpers` | 10 XML functions (stripNamespaces, xpathLike, etc.) | Live on Exchange |
 
 ---
 

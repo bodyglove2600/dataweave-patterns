@@ -10,14 +10,14 @@ How to publish DataWeave modules to Anypoint Exchange so MuleSoft developers can
 
 - Sign up at [anypoint.mulesoft.com](https://anypoint.mulesoft.com) (free trial available)
 - You need **Exchange Contributor** role in your organization
-- Note your **Organization ID** — find it in: Access Management → Organization → Settings
-- Your org ID is a UUID like `a1b2c3d4-e5f6-7890-abcd-ef1234567890`
+- Note your **Organization ID** — find it in: Access Management > Organization > Settings
+- Your org ID is a UUID like `cb0ecddd-1505-4354-870f-45c4217384c2`
 
 ### 2. Connected App (Recommended Auth Method)
 
 Create a Connected App for CI/CD publishing:
 
-1. Go to **Access Management → Connected Apps → Create App**
+1. Go to **Access Management > Connected Apps > Create App**
 2. Choose **App acts on its own behalf (Client Credentials)**
 3. Add scope: **Exchange Contributor** for your organization
 4. Save the **Client ID** and **Client Secret**
@@ -69,48 +69,23 @@ Every DataWeave module published to Exchange needs a specific POM configuration.
     <groupId>cb0ecddd-1505-4354-870f-45c4217384c2</groupId>
     <artifactId>dw-module-name</artifactId>
     <version>1.0.0</version>
-    <packaging>mule-extension</packaging>
+    <packaging>jar</packaging>
 
     <name>dw-module-name</name>
     <description>Description for Exchange listing</description>
 
-    <parent>
-        <groupId>org.mule.extensions</groupId>
-        <artifactId>mule-modules-parent</artifactId>
-        <version>1.3.2</version>
-    </parent>
-
     <properties>
-        <mule.version>4.4.0</mule.version>
-        <munit.version>2.3.16</munit.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
     </properties>
 
     <build>
-        <plugins>
-            <!-- Mule Maven Plugin -->
-            <plugin>
-                <groupId>org.mule.tools.maven</groupId>
-                <artifactId>mule-maven-plugin</artifactId>
-                <version>3.8.3</version>
-                <extensions>true</extensions>
-            </plugin>
-
-            <!-- MUnit Maven Plugin -->
-            <plugin>
-                <groupId>com.mulesoft.munit.tools</groupId>
-                <artifactId>munit-maven-plugin</artifactId>
-                <version>${munit.version}</version>
-                <executions>
-                    <execution>
-                        <id>test</id>
-                        <phase>test</phase>
-                        <goals>
-                            <goal>test</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-        </plugins>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+            </resource>
+        </resources>
     </build>
 
     <!-- Exchange Repository for deploy -->
@@ -122,28 +97,6 @@ Every DataWeave module published to Exchange needs a specific POM configuration.
             <layout>default</layout>
         </repository>
     </distributionManagement>
-
-    <!-- MuleSoft Repositories -->
-    <repositories>
-        <repository>
-            <id>mulesoft-releases</id>
-            <name>MuleSoft Releases</name>
-            <url>https://repository.mulesoft.org/releases/</url>
-        </repository>
-        <repository>
-            <id>mulesoft-snapshots</id>
-            <name>MuleSoft Snapshots</name>
-            <url>https://repository.mulesoft.org/snapshots/</url>
-        </repository>
-    </repositories>
-
-    <pluginRepositories>
-        <pluginRepository>
-            <id>mulesoft-releases</id>
-            <name>MuleSoft Releases</name>
-            <url>https://repository.mulesoft.org/releases/</url>
-        </pluginRepository>
-    </pluginRepositories>
 </project>
 ```
 
@@ -153,7 +106,7 @@ Every DataWeave module published to Exchange needs a specific POM configuration.
 |-------|-------|-------|
 | `groupId` | Your Anypoint Org ID | Must be the UUID from Access Management |
 | `artifactId` | Module name | e.g., `dw-string-utils` |
-| `packaging` | `mule-extension` | Required for DW modules |
+| `packaging` | `jar` | Standard jar packaging for DW library modules |
 | `distributionManagement.repository.id` | `anypoint-exchange-v3` | Must match `settings.xml` server ID |
 
 ---
@@ -167,6 +120,7 @@ dw-module-name/
 ├── src/
 │   ├── main/
 │   │   └── resources/
+│   │       ├── module-ModuleName.xml    # Mule module descriptor
 │   │       └── modules/
 │   │           └── ModuleName.dwl       # The DW module file
 │   └── test/
@@ -179,6 +133,19 @@ dw-module-name/
 - Path must be `src/main/resources/modules/ModuleName.dwl`
 - Module name should be PascalCase (e.g., `StringUtils.dwl`)
 - Users import with: `import modules::StringUtils`
+
+### Module Descriptor
+
+Each module needs a `module-ModuleName.xml` in `src/main/resources/`:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<module name="dw-module-name"
+        xmlns="http://www.mulesoft.org/schema/mule/module"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.mulesoft.org/schema/mule/module http://www.mulesoft.org/schema/mule/module/current/mule-module.xsd">
+</module>
+```
 
 ### Module File Structure
 
@@ -242,23 +209,46 @@ fun snakeCase(s: String): String =
 
 ---
 
-## Publishing Commands
+## Publishing
 
-### Build and Test Locally
+### Option A: Exchange API (Recommended)
+
+Use the Exchange API to publish directly — no Mule runtime needed:
 
 ```bash
-mvn clean test
+# 1. Get access token
+TOKEN=$(curl -s -X POST https://anypoint.mulesoft.com/accounts/api/v2/oauth2/token \
+  -H "Content-Type: application/json" \
+  -d '{"grant_type":"client_credentials","client_id":"YOUR_CLIENT_ID","client_secret":"YOUR_CLIENT_SECRET"}' \
+  | python3 -c "import json,sys;print(json.load(sys.stdin)['access_token'])")
+
+# 2. Build the jar
+mvn clean package
+
+# 3. Publish to Exchange
+curl -X POST "https://anypoint.mulesoft.com/exchange/api/v2/assets" \
+  -H "Authorization: Bearer $TOKEN" \
+  -F "organizationId=YOUR_ORG_ID" \
+  -F "groupId=YOUR_ORG_ID" \
+  -F "assetId=dw-module-name" \
+  -F "version=1.0.0" \
+  -F "name=dw-module-name" \
+  -F "type=custom" \
+  -F "classifier=custom" \
+  -F "files.custom.jar=@target/dw-module-name-1.0.0.jar"
 ```
 
-### Deploy to Exchange
+### Option B: Maven Deploy
 
 ```bash
 mvn clean deploy
 ```
 
+> Note: Maven deploy to Exchange may require the asset to be pre-created via the Exchange API first.
+
 ### Verify on Exchange
 
-After deploy, your module appears at:
+After publish, your module appears at:
 ```
 https://anypoint.mulesoft.com/exchange/cb0ecddd-1505-4354-870f-45c4217384c2/dw-module-name/
 ```
@@ -271,8 +261,8 @@ When the module is published, Exchange auto-generates a listing. To enhance it:
 
 | Metadata | Where | Notes |
 |----------|-------|-------|
-| Name | `pom.xml` → `<name>` | Display name on Exchange |
-| Description | `pom.xml` → `<description>` | Short description shown in search |
+| Name | `pom.xml` > `<name>` | Display name on Exchange |
+| Description | `pom.xml` > `<description>` | Short description shown in search |
 | Tags | Exchange UI (post-publish) | Add tags: `dataweave`, `utility`, `transformation` |
 | Icon | Exchange UI (post-publish) | Upload a 200x200 PNG icon |
 | Documentation | Exchange UI (post-publish) | Add usage examples, API docs |
@@ -289,7 +279,6 @@ When the module is published, Exchange auto-generates a listing. To enhance it:
     <groupId>cb0ecddd-1505-4354-870f-45c4217384c2</groupId>
     <artifactId>dw-string-utils</artifactId>
     <version>1.0.0</version>
-    <classifier>mule-plugin</classifier>
 </dependency>
 ```
 
@@ -334,6 +323,6 @@ Follow semantic versioning. Exchange supports multiple versions side by side.
 |-------|-----|
 | `401 Unauthorized` on deploy | Check `settings.xml` server ID matches POM, verify credentials |
 | `403 Forbidden` | Verify Exchange Contributor role in Access Management |
+| `412 Precondition Failed` | Asset must be pre-created via Exchange API before Maven deploy |
 | Module not found after deploy | Wait 1-2 minutes for Exchange indexing, check org ID |
 | MUnit tests fail | Ensure DW module path is exactly `src/main/resources/modules/` |
-| `mule-extension` packaging error | Add `mule-maven-plugin` with `<extensions>true</extensions>` |
